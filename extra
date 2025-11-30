@@ -1,3 +1,19 @@
+@Override
+    public Iterator<Command> iterator() {
+        return new Iterator<Command>() {
+            private int index = 0;
+            @Override
+            public boolean hasNext() { return index < commands.size(); }
+            @Override
+            public Command next() {
+                if(!hasNext()) throw new RuntimeException("нет элементов");
+                index++;
+                return commands.get(index-1); }
+        };
+    }
+
+
+
 package org.example.CPU;
 
 import java.util.Iterator;
