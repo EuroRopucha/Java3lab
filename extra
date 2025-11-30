@@ -1,0 +1,137 @@
+package org.example.CPU;
+
+import java.util.Iterator;
+
+public class Program implements Iterable<Command> {
+    private Command[] commands;
+    private int cnt = 0;
+
+    public Program(int size) {
+        commands = new Command[size];
+    }
+
+    public void add(Command c) {
+        if (cnt >= commands.length) {
+            throw new RuntimeException("Программа переполнена, нельзя добавить больше команд");
+        }
+        commands[cnt++] = c;
+    }
+
+    public int getCnt() {
+        return cnt;
+    }
+
+    public Command getCommand(int index) {
+        if (index < 0 || index >= cnt) {
+            throw new RuntimeException("Нет команды по индексу " + index);
+        }
+        return commands[index];
+    }
+
+    @Override
+    public Iterator<Command> iterator() {
+        return new Iterator<Command>() {
+            private int curr = 0;
+
+            @Override
+            public boolean hasNext() {
+                return curr < cnt;
+            }
+
+            @Override
+            public Command next() {
+                if (!hasNext()) throw new RuntimeException("Нет элементов");
+                return commands[curr++];
+            }
+        };
+    }
+
+    // 1. Самая популярная инструкция
+    public typeCommand mostPopularInstruction() {
+        java.util.Map<typeCommand, Integer> freq = new java.util.HashMap<>();
+        for (int i = 0; i < cnt; i++) {
+            Command c = commands[i];
+            freq.put(c.getCommand(), freq.getOrDefault(c.getCommand(), 0) + 1);
+        }
+        return java.util.Collections.max(freq.entrySet(), java.util.Map.Entry.comparingByValue()).getKey();
+    }
+
+    // 2. Диапазон адресов памяти
+    public int[] memoryRange() {
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+        for (int i = 0; i < cnt; i++) {
+            Command c = commands[i];
+            if (c.getArg1() != null && c.getArg1().matches("\\d+")) {
+                int addr = Integer.parseInt(c.getArg1());
+                min = Math.min(min, addr);
+                max = Math.max(max, addr);
+            }
+            if (c.getArg2() != null && c.getArg2().matches("\\d+")) {
+                int addr = Integer.parseInt(c.getArg2());
+                min = Math.min(min, addr);
+                max = Math.max(max, addr);
+            }
+        }
+        if (min == Integer.MAX_VALUE) return new int[]{};
+        return new int[]{min, max};
+    }
+
+    // 3. Список инструкций по частоте
+    public java.util.List<java.util.Map.Entry<typeCommand, Integer>> instructionsByFrequency() {
+        java.util.Map<typeCommand, Integer> freq = new java.util.HashMap<>();
+        for (int i = 0; i < cnt; i++) {
+            Command c = commands[i];
+            freq.put(c.getCommand(), freq.getOrDefault(c.getCommand(), 0) + 1);
+        }
+        java.util.List<java.util.Map.Entry<typeCommand, Integer>> list = new java.util.ArrayList<>(freq.entrySet());
+        list.sort((a, b) -> b.getValue().compareTo(a.getValue())); // по убыванию
+        return list;
+    }
+}
+
+///////////////////////////////////////////////
+package org.example;
+
+import org.example.CPU.*;
+import java.util.*;
+
+public class App {
+    public static void main(String[] args) {
+        ICpu cpu = BCpu.build();
+
+        try {
+            // создаём программу на массиве команд (например, максимум 20 команд)
+            Program prog = new Program(20);
+
+            prog.add(new Command("init 10 20"));
+            prog.add(new Command("init", "11", "25"));
+            prog.add(new Command("ld", "a", "10"));
+            prog.add(new Command("ld", "b", "11"));
+            prog.add(new Command("add"));
+            prog.add(new Command("print"));
+
+            // 1. Вывод всех команд через for-each (Iterable работает!)
+            System.out.println("=== Список команд ===");
+            for (Command c : prog) {
+                System.out.println(c);
+            }
+
+            // 2. Анализ программы
+            System.out.println("Самая популярная инструкция: " + prog.mostPopularInstruction());
+            System.out.println("Диапазон памяти: " + Arrays.toString(prog.memoryRange()));
+            System.out.println("Инструкции по частоте:");
+            for (Map.Entry<typeCommand, Integer> entry : prog.instructionsByFrequency()) {
+                System.out.println(entry.getKey() + " → " + entry.getValue());
+            }
+
+            // 3. Исполнение программы вручную
+            for (Command c : prog) {
+                cpu.exec(c);
+            }
+
+        } catch (CpuException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
